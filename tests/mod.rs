@@ -1,4 +1,4 @@
-use eth_keystore::decrypt_key;
+use eth_keystore::{decrypt_key, encrypt_key, new};
 use hex::FromHex;
 use std::path::Path;
 
@@ -6,9 +6,15 @@ mod tests {
     use super::*;
 
     #[test]
-    #[ignore]
     fn test_new() {
-        todo!();
+        let dir = Path::new("./tests/test-keys");
+        let mut rng = rand::thread_rng();
+        let (secret, uuid) = new(&dir, &mut rng, "thebestrandompassword").unwrap();
+
+        let keypath = dir.join(uuid);
+        assert_eq!(decrypt_key(&keypath, "thebestrandompassword"), Ok(secret));
+        assert!(decrypt_key(&keypath, "notthebestrandompassword").is_err());
+        assert!(std::fs::remove_file(&keypath).is_ok());
     }
 
     #[test]
@@ -17,7 +23,8 @@ mod tests {
             Vec::from_hex("7a28b5ba57c53603b0b07b56bba752f7784bf506fa95edc395f5cf6c7514fe9d")
                 .unwrap();
         let keypath = Path::new("./tests/test-keys/key-pbkdf2.json");
-        assert_eq!(decrypt_key(&keypath, "testpassword"), Ok(secret.clone()));
+        assert_eq!(decrypt_key(&keypath, "testpassword"), Ok(secret));
+        assert!(decrypt_key(&keypath, "wrongtestpassword").is_err());
     }
 
     #[test]
@@ -27,11 +34,21 @@ mod tests {
                 .unwrap();
         let keypath = Path::new("./tests/test-keys/key-scrypt.json");
         assert_eq!(decrypt_key(&keypath, "grOQ8QDnGHvpYJf"), Ok(secret));
+        assert!(decrypt_key(&keypath, "thisisnotrandom").is_err());
     }
 
     #[test]
-    #[ignore]
-    fn test_encrypt_key() {
-        todo!();
+    fn test_encrypt_decrypt_key() {
+        let secret =
+            Vec::from_hex("7a28b5ba57c53603b0b07b56bba752f7784bf506fa95edc395f5cf6c7514fe9d")
+                .unwrap();
+        let dir = Path::new("./tests/test-keys");
+        let mut rng = rand::thread_rng();
+        let uuid = encrypt_key(&dir, &mut rng, &secret, "newpassword").unwrap();
+
+        let keypath = dir.join(uuid);
+        assert_eq!(decrypt_key(&keypath, "newpassword"), Ok(secret));
+        assert!(decrypt_key(&keypath, "notanewpassword").is_err());
+        assert!(std::fs::remove_file(&keypath).is_ok());
     }
 }
