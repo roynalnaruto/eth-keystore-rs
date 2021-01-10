@@ -20,7 +20,7 @@ mod keystore;
 
 use keystore::{CipherparamsJson, CryptoJson, KdfType, KdfparamsType};
 
-pub use error::Error;
+pub use error::KeystoreError;
 pub use keystore::EthKeystore;
 
 const DEFAULT_CIPHER: &str = "aes-128-ctr";
@@ -31,7 +31,7 @@ const DEFAULT_KDF_PARAMS_LOG_N: u8 = 13u8;
 const DEFAULT_KDF_PARAMS_R: u32 = 8u32;
 const DEFAULT_KDF_PARAMS_P: u32 = 1u32;
 
-pub fn new<P, R, S>(dir: P, rng: &mut R, password: S) -> Result<(Vec<u8>, String), Error>
+pub fn new<P, R, S>(dir: P, rng: &mut R, password: S) -> Result<(Vec<u8>, String), KeystoreError>
 where
     P: AsRef<Path>,
     R: Rng + CryptoRng,
@@ -45,7 +45,7 @@ where
     Ok((pk, uuid))
 }
 
-pub fn decrypt_key<P, S>(path: P, password: S) -> Result<Vec<u8>, Error>
+pub fn decrypt_key<P, S>(path: P, password: S) -> Result<Vec<u8>, KeystoreError>
 where
     P: AsRef<Path>,
     S: AsRef<[u8]>,
@@ -91,7 +91,7 @@ where
     hasher.input(&keystore.crypto.ciphertext);
     hasher.result(&mut derived_mac);
     if derived_mac != keystore.crypto.mac {
-        return Err(Error::MacMismatch);
+        return Err(KeystoreError::MacMismatch);
     }
 
     // Decrypt the private key bytes using AES-128-CTR
@@ -106,7 +106,12 @@ where
     Ok(pk)
 }
 
-pub fn encrypt_key<P, R, B, S>(dir: P, rng: &mut R, pk: B, password: S) -> Result<String, Error>
+pub fn encrypt_key<P, R, B, S>(
+    dir: P,
+    rng: &mut R,
+    pk: B,
+    password: S,
+) -> Result<String, KeystoreError>
 where
     P: AsRef<Path>,
     R: Rng + CryptoRng,
