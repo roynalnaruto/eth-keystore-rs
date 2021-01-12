@@ -1,3 +1,6 @@
+#![cfg_attr(docsrs, feature(doc_cfg))]
+//! A minimalist library to interact with encrypted JSON keystores as per the
+//! [Web3 Secret Storage Definition](https://github.com/ethereum/wiki/wiki/Web3-Secret-Storage-Definition).
 use crypto::{
     aes,
     digest::Digest,
@@ -18,10 +21,8 @@ use uuid::Uuid;
 mod error;
 mod keystore;
 
-use keystore::{CipherparamsJson, CryptoJson, KdfType, KdfparamsType};
-
 pub use error::KeystoreError;
-pub use keystore::EthKeystore;
+pub use keystore::{CipherparamsJson, CryptoJson, EthKeystore, KdfType, KdfparamsType};
 
 const DEFAULT_CIPHER: &str = "aes-128-ctr";
 const DEFAULT_KEY_SIZE: usize = 32usize;
@@ -31,6 +32,23 @@ const DEFAULT_KDF_PARAMS_LOG_N: u8 = 13u8;
 const DEFAULT_KDF_PARAMS_R: u32 = 8u32;
 const DEFAULT_KDF_PARAMS_P: u32 = 1u32;
 
+/// Creates a new JSON keystore using the [Scrypt](https://tools.ietf.org/html/rfc7914.html)
+/// key derivation function. The keystore is encrypted by a key derived from the provided `password`
+/// and stored in the provided directory.
+///
+/// # Example
+///
+/// ```no_run
+/// use eth_keystore::new;
+/// use std::path::Path;
+///
+/// # async fn foobar() -> Result<(), Box<dyn std::error::Error>> {
+/// let dir = Path::new("./keys");
+/// let mut rng = rand::thread_rng();
+/// let (private_key, uuid) = new(&dir, &mut rng, "password_to_keystore")?;
+/// # Ok(())
+/// # }
+/// ```
 pub fn new<P, R, S>(dir: P, rng: &mut R, password: S) -> Result<(Vec<u8>, String), KeystoreError>
 where
     P: AsRef<Path>,
@@ -45,6 +63,22 @@ where
     Ok((pk, uuid))
 }
 
+/// Decrypts an encrypted JSON keystore at the provided `path` using the provided `password`.
+/// Decryption supports the [Scrypt](https://tools.ietf.org/html/rfc7914.html) and
+/// [PBKDF2](https://ietf.org/rfc/rfc2898.txt) key derivation functions.
+///
+/// # Example
+///
+/// ```no_run
+/// use eth_keystore::decrypt_key;
+/// use std::path::Path;
+///
+/// # async fn foobar() -> Result<(), Box<dyn std::error::Error>> {
+/// let keypath = Path::new("./keys/my-key");
+/// let private_key = decrypt_key(&keypath, "password_to_keystore")?;
+/// # Ok(())
+/// # }
+/// ```
 pub fn decrypt_key<P, S>(path: P, password: S) -> Result<Vec<u8>, KeystoreError>
 where
     P: AsRef<Path>,
@@ -106,6 +140,28 @@ where
     Ok(pk)
 }
 
+/// Encrypts the given private key using the [Scrypt](https://tools.ietf.org/html/rfc7914.html)
+/// password-based key derivation function, and stores it in the provided directory.
+///
+/// # Example
+///
+/// ```no_run
+/// use eth_keystore::encrypt_key;
+/// use rand::RngCore;
+/// use std::path::Path;
+///
+/// # async fn foobar() -> Result<(), Box<dyn std::error::Error>> {
+/// let dir = Path::new("./keys");
+/// let mut rng = rand::thread_rng();
+///
+/// // Construct a 32-byte random private key.
+/// let mut private_key = vec![0u8; 32];
+/// rng.fill_bytes(private_key.as_mut_slice());
+///
+/// let uuid = encrypt_key(&dir, &mut rng, &private_key, "password_to_keystore")?;
+/// # Ok(())
+/// # }
+/// ```
 pub fn encrypt_key<P, R, B, S>(
     dir: P,
     rng: &mut R,

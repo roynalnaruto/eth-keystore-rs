@@ -2,9 +2,14 @@ use std::fmt;
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
+/// An error thrown when interacting with the eth-keystore crate.
 pub enum KeystoreError {
+    /// An error thrown while decrypting an encrypted JSON keystore if the calculated MAC does not
+    /// match the MAC declared in the keystore.
     MacMismatch,
+    /// An error thrown by the Rust `std::io` module.
     StdIo(String),
+    /// An error thrown by the [Serde JSON](https://docs.serde.rs/serde_json/) crate.
     SerdeJson(String),
 }
 
