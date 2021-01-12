@@ -9,6 +9,7 @@ documentation = "https://docs.rs/eth-keystore"
 repository = "https://github.com/roynalnaruto/eth-keystore-rs"
 readme = "README.md"
 keywords = ["ethereum", "web3", "wallet"]
+exclude = ["tests/test-keys/*"]
 
 [dependencies]
 hex = "0.4.2"
