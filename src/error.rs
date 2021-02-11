@@ -1,29 +1,45 @@
-use std::fmt;
 use thiserror::Error;
 
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug)]
 /// An error thrown when interacting with the eth-keystore crate.
 pub enum KeystoreError {
     /// An error thrown while decrypting an encrypted JSON keystore if the calculated MAC does not
     /// match the MAC declared in the keystore.
+    #[error("Mac Mismatch")]
     MacMismatch,
     /// An error thrown by the Rust `std::io` module.
+    #[error("IO: {0}")]
     StdIo(String),
     /// An error thrown by the [Serde JSON](https://docs.serde.rs/serde_json/) crate.
+    #[error("serde-json: {0}")]
     SerdeJson(String),
+
+    /// Invalid scrypt output length
+    #[error("scrypt {0:?}")]
+    ScryptInvalidParams(scrypt::errors::InvalidParams),
+    /// Invalid scrypt output length
+    #[error("scrypt {0:?}")]
+    ScryptInvalidOuputLen(scrypt::errors::InvalidOutputLen),
+    /// Invalid aes key nonce length
+    #[error("aes {0:?}")]
+    AesInvalidKeyNonceLength(aes::cipher::stream::InvalidKeyNonceLength),
 }
 
-impl fmt::Display for KeystoreError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
-        write!(
-            f,
-            "{}",
-            match self {
-                KeystoreError::MacMismatch => String::from("MAC Mismatch"),
-                KeystoreError::StdIo(e) => format!("IO: {}", e),
-                KeystoreError::SerdeJson(e) => format!("serde-json: {}", e),
-            }
-        )
+impl From<scrypt::errors::InvalidParams> for KeystoreError {
+    fn from(e: scrypt::errors::InvalidParams) -> Self {
+        Self::ScryptInvalidParams(e)
+    }
+}
+
+impl From<scrypt::errors::InvalidOutputLen> for KeystoreError {
+    fn from(e: scrypt::errors::InvalidOutputLen) -> Self {
+        Self::ScryptInvalidOuputLen(e)
+    }
+}
+
+impl From<aes::cipher::stream::InvalidKeyNonceLength> for KeystoreError {
+    fn from(e: aes::cipher::stream::InvalidKeyNonceLength) -> Self {
+        Self::AesInvalidKeyNonceLength(e)
     }
 }
 

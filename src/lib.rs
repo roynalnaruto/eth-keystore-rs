@@ -1,15 +1,18 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 //! A minimalist library to interact with encrypted JSON keystores as per the
 //! [Web3 Secret Storage Definition](https://github.com/ethereum/wiki/wiki/Web3-Secret-Storage-Definition).
-use crypto::{
-    aes,
-    digest::Digest,
-    hmac::Hmac,
-    pbkdf2::pbkdf2,
-    scrypt::{scrypt, ScryptParams},
-    sha2::Sha256,
-    sha3::Sha3,
+use aes::{
+    cipher::{NewStreamCipher, SyncStreamCipher},
+    Aes128,
 };
+use ctr::Ctr128;
+use digest::Digest;
+use hmac::Hmac;
+use pbkdf2::pbkdf2;
+use scrypt::{scrypt, Params as ScryptParams};
+use sha2::Sha256;
+use sha3::Keccak256;
+
 use rand::{CryptoRng, Rng};
 use std::{
     fs::File,
@@ -99,8 +102,7 @@ where
             salt,
         } => {
             let mut key = vec![0u8; dklen as usize];
-            let mut hmac = Hmac::new(Sha256::new(), password.as_ref());
-            pbkdf2(&mut hmac, &salt, c, key.as_mut_slice());
+            pbkdf2::<Hmac<Sha256>>(password.as_ref(), &salt, c, key.as_mut_slice());
             key
         }
         KdfparamsType::Scrypt {
@@ -112,30 +114,29 @@ where
         } => {
             let mut key = vec![0u8; dklen as usize];
             let log_n = (n as f32).log2() as u8;
-            let scrypt_params = ScryptParams::new(log_n, r, p);
-            scrypt(password.as_ref(), &salt, &scrypt_params, key.as_mut_slice());
+            let scrypt_params = ScryptParams::new(log_n, r, p)?;
+            scrypt(password.as_ref(), &salt, &scrypt_params, key.as_mut_slice())?;
             key
         }
     };
 
     // Derive the MAC from the derived key and ciphertext.
-    let mut hasher = Sha3::keccak256();
-    let mut derived_mac = vec![0u8; DEFAULT_KEY_SIZE];
-    hasher.input(&key[16..32]);
-    hasher.input(&keystore.crypto.ciphertext);
-    hasher.result(&mut derived_mac);
-    if derived_mac != keystore.crypto.mac {
+    let derived_mac = Keccak256::new()
+        .chain(&key[16..32])
+        .chain(&keystore.crypto.ciphertext)
+        .finalize();
+
+    if derived_mac.as_slice() != keystore.crypto.mac.as_slice() {
         return Err(KeystoreError::MacMismatch);
     }
 
     // Decrypt the private key bytes using AES-128-CTR
-    let mut pk = vec![0u8; DEFAULT_KEY_SIZE];
-    let mut decryptor = aes::ctr(
-        aes::KeySize::KeySize128,
-        &key,
-        &keystore.crypto.cipherparams.iv,
-    );
-    decryptor.process(&keystore.crypto.ciphertext, &mut pk);
+    dbg!(&key.len());
+    dbg!(&keystore.crypto.cipherparams.iv.len());
+    let mut decryptor = Ctr128::<Aes128>::new_var(&key[..16], &keystore.crypto.cipherparams.iv)?;
+
+    let mut pk = keystore.crypto.ciphertext.clone();
+    decryptor.apply_keystream(&mut pk);
 
     Ok(pk)
 }
@@ -184,22 +185,23 @@ where
         DEFAULT_KDF_PARAMS_LOG_N,
         DEFAULT_KDF_PARAMS_R,
         DEFAULT_KDF_PARAMS_P,
-    );
-    scrypt(password.as_ref(), &salt, &scrypt_params, key.as_mut_slice());
+    )?;
+    scrypt(password.as_ref(), &salt, &scrypt_params, key.as_mut_slice())?;
 
     // Encrypt the private key using AES-128-CTR.
-    let mut ciphertext = vec![0u8; DEFAULT_KEY_SIZE];
     let mut iv = vec![0u8; DEFAULT_IV_SIZE];
     rng.fill_bytes(iv.as_mut_slice());
-    let mut encryptor = aes::ctr(aes::KeySize::KeySize128, &key, &iv);
-    encryptor.process(pk.as_ref(), &mut ciphertext);
+
+    let mut encryptor = Ctr128::<Aes128>::new_var(&key[..16], &iv)?;
+
+    let mut ciphertext = pk.as_ref().to_vec();
+    encryptor.apply_keystream(&mut ciphertext);
 
     // Calculate the MAC.
-    let mut hasher = Sha3::keccak256();
-    let mut mac = vec![0u8; DEFAULT_KEY_SIZE];
-    hasher.input(&key[16..32]);
-    hasher.input(&ciphertext);
-    hasher.result(&mut mac);
+    let mac = Keccak256::new()
+        .chain(&key[16..32])
+        .chain(&ciphertext)
+        .finalize();
 
     // Construct and serialize the encrypted JSON keystore.
     let id = Uuid::new_v4();
@@ -209,7 +211,7 @@ where
         crypto: CryptoJson {
             cipher: String::from(DEFAULT_CIPHER),
             cipherparams: CipherparamsJson { iv },
-            ciphertext,
+            ciphertext: ciphertext.to_vec(),
             kdf: KdfType::Scrypt,
             kdfparams: KdfparamsType::Scrypt {
                 dklen: DEFAULT_KDF_PARAMS_DKLEN,
@@ -218,7 +220,7 @@ where
                 r: DEFAULT_KDF_PARAMS_R,
                 salt,
             },
-            mac,
+            mac: mac.to_vec(),
         },
     };
     let contents = serde_json::to_string(&keystore)?;
