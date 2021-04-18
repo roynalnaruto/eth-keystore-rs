@@ -131,8 +131,6 @@ where
     }
 
     // Decrypt the private key bytes using AES-128-CTR
-    dbg!(&key.len());
-    dbg!(&keystore.crypto.cipherparams.iv.len());
     let mut decryptor = Ctr128::<Aes128>::new_var(&key[..16], &keystore.crypto.cipherparams.iv)?;
 
     let mut pk = keystore.crypto.ciphertext.clone();
