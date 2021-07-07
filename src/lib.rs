@@ -1,11 +1,8 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 //! A minimalist library to interact with encrypted JSON keystores as per the
 //! [Web3 Secret Storage Definition](https://github.com/ethereum/wiki/wiki/Web3-Secret-Storage-Definition).
-use aes::{
-    cipher::{NewStreamCipher, SyncStreamCipher},
-    Aes128,
-};
-use ctr::Ctr128;
+
+use ctr::cipher::{NewCipher, StreamCipher};
 use digest::Digest;
 use hmac::Hmac;
 use pbkdf2::pbkdf2;
@@ -26,6 +23,7 @@ mod keystore;
 
 pub use error::KeystoreError;
 pub use keystore::{CipherparamsJson, CryptoJson, EthKeystore, KdfType, KdfparamsType};
+type Aes128Ctr = ctr::Ctr128BE<aes::Aes128>;
 
 const DEFAULT_CIPHER: &str = "aes-128-ctr";
 const DEFAULT_KEY_SIZE: usize = 32usize;
@@ -131,7 +129,10 @@ where
     }
 
     // Decrypt the private key bytes using AES-128-CTR
-    let mut decryptor = Ctr128::<Aes128>::new_var(&key[..16], &keystore.crypto.cipherparams.iv)?;
+    let mut decryptor = Aes128Ctr::new(
+        (&key[..16]).into(),
+        (&keystore.crypto.cipherparams.iv[..16]).into(),
+    );
 
     let mut pk = keystore.crypto.ciphertext.clone();
     decryptor.apply_keystream(&mut pk);
@@ -190,7 +191,7 @@ where
     let mut iv = vec![0u8; DEFAULT_IV_SIZE];
     rng.fill_bytes(iv.as_mut_slice());
 
-    let mut encryptor = Ctr128::<Aes128>::new_var(&key[..16], &iv)?;
+    let mut encryptor = Aes128Ctr::new((&key[..16]).into(), (&iv[..16]).into());
 
     let mut ciphertext = pk.as_ref().to_vec();
     encryptor.apply_keystream(&mut ciphertext);

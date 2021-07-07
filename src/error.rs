@@ -22,7 +22,7 @@ pub enum KeystoreError {
     ScryptInvalidOuputLen(scrypt::errors::InvalidOutputLen),
     /// Invalid aes key nonce length
     #[error("aes {0:?}")]
-    AesInvalidKeyNonceLength(aes::cipher::stream::InvalidKeyNonceLength),
+    AesInvalidKeyNonceLength(aes::cipher::errors::InvalidLength),
 }
 
 impl From<scrypt::errors::InvalidParams> for KeystoreError {
@@ -37,8 +37,8 @@ impl From<scrypt::errors::InvalidOutputLen> for KeystoreError {
     }
 }
 
-impl From<aes::cipher::stream::InvalidKeyNonceLength> for KeystoreError {
-    fn from(e: aes::cipher::stream::InvalidKeyNonceLength) -> Self {
+impl From<aes::cipher::errors::InvalidLength> for KeystoreError {
+    fn from(e: aes::cipher::errors::InvalidLength) -> Self {
         Self::AesInvalidKeyNonceLength(e)
     }
 }
