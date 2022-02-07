@@ -9,6 +9,7 @@ use pbkdf2::pbkdf2;
 use scrypt::{scrypt, Params as ScryptParams};
 use sha2::Sha256;
 use sha3::Keccak256;
+use digest::Update;
 
 use rand::{CryptoRng, Rng};
 use std::{
