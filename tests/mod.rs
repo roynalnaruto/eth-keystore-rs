@@ -48,7 +48,7 @@ mod tests {
                 .unwrap();
         let dir = Path::new("./tests/test-keys");
         let mut rng = rand::thread_rng();
-        let uuid = encrypt_key(&dir, &mut rng, &secret, "newpassword").unwrap();
+        let uuid = encrypt_key(&dir, &mut rng, &secret, "newpassword", None).unwrap();
 
         let keypath = dir.join(uuid);
         assert_eq!(decrypt_key(&keypath, "newpassword").unwrap(), secret);
