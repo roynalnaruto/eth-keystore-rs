@@ -1,13 +1,12 @@
 use hex::{FromHex, ToHex};
 use serde::{de::Deserializer, ser::Serializer, Deserialize, Serialize};
-use uuid::Uuid;
 
 #[derive(Debug, Deserialize, Serialize)]
 /// This struct represents the deserialized form of an encrypted JSON keystore based on the
 /// [Web3 Secret Storage Definition](https://github.com/ethereum/wiki/wiki/Web3-Secret-Storage-Definition).
 pub struct EthKeystore {
     pub crypto: CryptoJson,
-    pub id: Uuid,
+    pub id: String,
     pub version: u8,
 }
 
@@ -79,6 +78,7 @@ where
 
 #[cfg(test)]
 mod tests {
+    use uuid::Uuid;
     use super::*;
 
     #[test]
@@ -107,7 +107,7 @@ mod tests {
         assert_eq!(keystore.version, 3);
         assert_eq!(
             keystore.id,
-            Uuid::parse_str("3198bc9c-6672-5ab3-d995-4942343ae5b6").unwrap()
+            Uuid::parse_str("3198bc9c-6672-5ab3-d995-4942343ae5b6").unwrap().to_string()
         );
         assert_eq!(keystore.crypto.cipher, "aes-128-ctr");
         assert_eq!(
@@ -166,7 +166,7 @@ mod tests {
         assert_eq!(keystore.version, 3);
         assert_eq!(
             keystore.id,
-            Uuid::parse_str("3198bc9c-6672-5ab3-d995-4942343ae5b6").unwrap()
+            Uuid::parse_str("3198bc9c-6672-5ab3-d995-4942343ae5b6").unwrap().to_string()
         );
         assert_eq!(keystore.crypto.cipher, "aes-128-ctr");
         assert_eq!(
