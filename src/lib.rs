@@ -140,7 +140,10 @@ where
     Ok(pk)
 }
 
-#[deprecated(note = "Use encrypt_key_with_id() instead")]
+/// Encrypts the given private key using the [Scrypt](https://tools.ietf.org/html/rfc7914.html)
+/// password-based key derivation function, and stores 
+/// it in the provided directory using a UUID (v4)
+/// for the identifier.
 pub fn encrypt_key<P, R, B, S>(
     dir: P,
     rng: &mut R,
@@ -159,8 +162,9 @@ where
 }
 
 /// Encrypts the given private key using the [Scrypt](https://tools.ietf.org/html/rfc7914.html)
-/// password-based key derivation function, and stores it in the provided directory using the
-/// identifier as the file name.
+/// password-based key derivation function, and stores 
+/// it in the provided directory using the
+/// given identifier as the file name.
 ///
 /// # Example
 ///
