@@ -60,7 +60,7 @@ where
     let mut pk = vec![0u8; DEFAULT_KEY_SIZE];
     rng.fill_bytes(pk.as_mut_slice());
 
-    let uuid = encrypt_key(dir, rng, pk.clone(), password, None)?;
+    let uuid = encrypt_key(dir, rng, pk.clone(), password, None::<String>)?;
     Ok((pk, uuid))
 }
 
@@ -161,24 +161,26 @@ where
 /// let mut private_key = vec![0u8; 32];
 /// rng.fill_bytes(private_key.as_mut_slice());
 ///
-/// let uuid = encrypt_key(&dir, &mut rng, &private_key, "password_to_keystore", None)?;
+/// let uuid = encrypt_key(&dir, &mut rng, &private_key, "password_to_keystore", None::<String>)?;
 /// # Ok(())
 /// # }
 /// ```
-pub fn encrypt_key<P, R, B, S>(
+pub fn encrypt_key<P, R, B, S, I>(
     dir: P,
     rng: &mut R,
     pk: B,
     password: S,
-    mut id: Option<String>,
+    id: Option<I>,
 ) -> Result<String, KeystoreError>
 where
     P: AsRef<Path>,
     R: Rng + CryptoRng,
     B: AsRef<[u8]>,
     S: AsRef<[u8]>,
+    I: Into<String>,
 {
-    let id = id.take().unwrap_or(Uuid::new_v4().to_string());
+    let id = id.map(|id| id.into())
+        .unwrap_or(Uuid::new_v4().to_string());
     // Generate a random salt.
     let mut salt = vec![0u8; DEFAULT_KEY_SIZE];
     rng.fill_bytes(salt.as_mut_slice());
