@@ -4,6 +4,7 @@
 
 use ctr::cipher::{NewCipher, StreamCipher};
 use digest::Digest;
+use digest::Update;
 use hmac::Hmac;
 use pbkdf2::pbkdf2;
 use scrypt::{scrypt, Params as ScryptParams};
