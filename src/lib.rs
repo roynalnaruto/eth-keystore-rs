@@ -35,7 +35,7 @@ const DEFAULT_KDF_PARAMS_P: u32 = 1u32;
 
 /// Creates a new JSON keystore using the [Scrypt](https://tools.ietf.org/html/rfc7914.html)
 /// key derivation function. The keystore is encrypted by a key derived from the provided `password`
-/// and stored in the provided directory.
+/// and stored in the provided file.
 ///
 /// # Example
 ///
@@ -50,7 +50,7 @@ const DEFAULT_KDF_PARAMS_P: u32 = 1u32;
 /// # Ok(())
 /// # }
 /// ```
-pub fn new<P, R, S>(dir: P, rng: &mut R, password: S) -> Result<(Vec<u8>, String), KeystoreError>
+pub fn new<P, R, S>(file: P, rng: &mut R, password: S) -> Result<(Vec<u8>, String), KeystoreError>
 where
     P: AsRef<Path>,
     R: Rng + CryptoRng,
@@ -60,7 +60,7 @@ where
     let mut pk = vec![0u8; DEFAULT_KEY_SIZE];
     rng.fill_bytes(pk.as_mut_slice());
 
-    let uuid = encrypt_key(dir, rng, pk.clone(), password, None::<String>)?;
+    let uuid = encrypt_key(file, rng, pk.clone(), password)?;
     Ok((pk, uuid))
 }
 
@@ -142,8 +142,7 @@ where
 
 /// Encrypts the given private key using the [Scrypt](https://tools.ietf.org/html/rfc7914.html)
 /// password-based key derivation function, and stores 
-/// it in the provided directory using the
-/// given identifier as the file name.
+/// it in the provided file.
 ///
 /// # Example
 ///
@@ -161,26 +160,23 @@ where
 /// let mut private_key = vec![0u8; 32];
 /// rng.fill_bytes(private_key.as_mut_slice());
 ///
-/// let uuid = encrypt_key(&dir, &mut rng, &private_key, "password_to_keystore", None::<String>)?;
+/// let uuid = encrypt_key(&dir, &mut rng, &private_key, "password_to_keystore")?;
 /// # Ok(())
 /// # }
 /// ```
-pub fn encrypt_key<P, R, B, S, I>(
-    dir: P,
+pub fn encrypt_key<P, R, B, S>(
+    file: P,
     rng: &mut R,
     pk: B,
     password: S,
-    id: Option<I>,
 ) -> Result<String, KeystoreError>
 where
     P: AsRef<Path>,
     R: Rng + CryptoRng,
     B: AsRef<[u8]>,
     S: AsRef<[u8]>,
-    I: Into<String>,
 {
-    let id = id.map(|id| id.into())
-        .unwrap_or(Uuid::new_v4().to_string());
+    let id = Uuid::new_v4().to_string();
     // Generate a random salt.
     let mut salt = vec![0u8; DEFAULT_KEY_SIZE];
     rng.fill_bytes(salt.as_mut_slice());
@@ -231,7 +227,7 @@ where
     let contents = serde_json::to_string(&keystore)?;
 
     // Create a file in write-only mode, to store the encrypted JSON keystore.
-    let mut file = File::create(dir.as_ref().join(&id))?;
+    let mut file = File::create(file.as_ref())?;
     file.write_all(contents.as_bytes())?;
 
     Ok(id)

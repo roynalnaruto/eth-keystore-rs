@@ -7,18 +7,16 @@ mod tests {
 
     #[test]
     fn test_new() {
-        let dir = Path::new("./tests/test-keys");
+        let file = Path::new("./target/test_new.json");
         let mut rng = rand::thread_rng();
-        let (secret, uuid) = new(&dir, &mut rng, "thebestrandompassword").unwrap();
-
-        let keypath = dir.join(uuid);
+        let (secret, _uuid) = new(&file, &mut rng, "thebestrandompassword").unwrap();
 
         assert_eq!(
-            decrypt_key(&keypath, "thebestrandompassword").unwrap(),
+            decrypt_key(&file, "thebestrandompassword").unwrap(),
             secret
         );
-        assert!(decrypt_key(&keypath, "notthebestrandompassword").is_err());
-        assert!(std::fs::remove_file(&keypath).is_ok());
+        assert!(decrypt_key(&file, "notthebestrandompassword").is_err());
+        assert!(std::fs::remove_file(&file).is_ok());
     }
 
     #[test]
@@ -46,13 +44,12 @@ mod tests {
         let secret =
             Vec::from_hex("7a28b5ba57c53603b0b07b56bba752f7784bf506fa95edc395f5cf6c7514fe9d")
                 .unwrap();
-        let dir = Path::new("./tests/test-keys");
+        let file = Path::new("./target/test_encrypt_decrypt_key.json");
         let mut rng = rand::thread_rng();
-        let uuid = encrypt_key(&dir, &mut rng, &secret, "newpassword", None::<String>).unwrap();
+        let _uuid = encrypt_key(&file, &mut rng, &secret, "newpassword").unwrap();
 
-        let keypath = dir.join(uuid);
-        assert_eq!(decrypt_key(&keypath, "newpassword").unwrap(), secret);
-        assert!(decrypt_key(&keypath, "notanewpassword").is_err());
-        assert!(std::fs::remove_file(&keypath).is_ok());
+        assert_eq!(decrypt_key(&file, "newpassword").unwrap(), secret);
+        assert!(decrypt_key(&file, "notanewpassword").is_err());
+        assert!(std::fs::remove_file(&file).is_ok());
     }
 }
