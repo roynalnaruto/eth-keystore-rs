@@ -3,8 +3,7 @@
 //! [Web3 Secret Storage Definition](https://github.com/ethereum/wiki/wiki/Web3-Secret-Storage-Definition).
 
 use ctr::cipher::{NewCipher, StreamCipher};
-use digest::Digest;
-use digest::Update;
+use digest::{Digest, Update};
 use hmac::Hmac;
 use pbkdf2::pbkdf2;
 use rand::{CryptoRng, Rng};
