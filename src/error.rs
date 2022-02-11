@@ -13,7 +13,6 @@ pub enum KeystoreError {
     /// An error thrown by the [Serde JSON](https://docs.serde.rs/serde_json/) crate.
     #[error("serde-json: {0}")]
     SerdeJson(String),
-
     /// Invalid scrypt output length
     #[error("scrypt {0:?}")]
     ScryptInvalidParams(scrypt::errors::InvalidParams),

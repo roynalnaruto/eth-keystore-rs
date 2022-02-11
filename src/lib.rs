@@ -3,21 +3,20 @@
 //! [Web3 Secret Storage Definition](https://github.com/ethereum/wiki/wiki/Web3-Secret-Storage-Definition).
 
 use ctr::cipher::{NewCipher, StreamCipher};
-use digest::Digest;
-use digest::Update;
+use digest::{Digest, Update};
 use hmac::Hmac;
 use pbkdf2::pbkdf2;
+use rand::{CryptoRng, Rng};
 use scrypt::{scrypt, Params as ScryptParams};
 use sha2::Sha256;
 use sha3::Keccak256;
+use uuid::Uuid;
 
-use rand::{CryptoRng, Rng};
 use std::{
     fs::File,
     io::{Read, Write},
     path::Path,
 };
-use uuid::Uuid;
 
 mod error;
 mod keystore;
@@ -36,7 +35,8 @@ const DEFAULT_KDF_PARAMS_P: u32 = 1u32;
 
 /// Creates a new JSON keystore using the [Scrypt](https://tools.ietf.org/html/rfc7914.html)
 /// key derivation function. The keystore is encrypted by a key derived from the provided `password`
-/// and stored in the provided directory.
+/// and stored in the provided directory with either the user-provided filename, or a generated
+/// Uuid `id`.
 ///
 /// # Example
 ///
@@ -47,11 +47,21 @@ const DEFAULT_KDF_PARAMS_P: u32 = 1u32;
 /// # async fn foobar() -> Result<(), Box<dyn std::error::Error>> {
 /// let dir = Path::new("./keys");
 /// let mut rng = rand::thread_rng();
-/// let (private_key, uuid) = new(&dir, &mut rng, "password_to_keystore")?;
+/// // here `None` signifies we don't specify a filename for the keystore.
+/// // the default filename is a generated Uuid for the keystore.
+/// let (private_key, name) = new(&dir, &mut rng, "password_to_keystore", None)?;
+///
+/// // here `Some("my_key")` denotes a custom filename passed by the caller.
+/// let (private_key, name) = new(&dir, &mut rng, "password_to_keystore", Some("my_key"))?;
 /// # Ok(())
 /// # }
 /// ```
-pub fn new<P, R, S>(dir: P, rng: &mut R, password: S) -> Result<(Vec<u8>, String), KeystoreError>
+pub fn new<P, R, S>(
+    dir: P,
+    rng: &mut R,
+    password: S,
+    name: Option<&str>,
+) -> Result<(Vec<u8>, String), KeystoreError>
 where
     P: AsRef<Path>,
     R: Rng + CryptoRng,
@@ -61,8 +71,8 @@ where
     let mut pk = vec![0u8; DEFAULT_KEY_SIZE];
     rng.fill_bytes(pk.as_mut_slice());
 
-    let uuid = encrypt_key(dir, rng, pk.clone(), password)?;
-    Ok((pk, uuid))
+    let name = encrypt_key(dir, rng, &pk, password, name)?;
+    Ok((pk, name))
 }
 
 /// Decrypts an encrypted JSON keystore at the provided `path` using the provided `password`.
@@ -142,7 +152,8 @@ where
 }
 
 /// Encrypts the given private key using the [Scrypt](https://tools.ietf.org/html/rfc7914.html)
-/// password-based key derivation function, and stores it in the provided directory.
+/// password-based key derivation function, and stores it in the provided directory. On success, it
+/// returns the `id` (Uuid) generated for this keystore.
 ///
 /// # Example
 ///
@@ -159,7 +170,8 @@ where
 /// let mut private_key = vec![0u8; 32];
 /// rng.fill_bytes(private_key.as_mut_slice());
 ///
-/// let uuid = encrypt_key(&dir, &mut rng, &private_key, "password_to_keystore")?;
+/// // Since we specify a custom filename for the keystore, it will be stored in `$dir/my-key`
+/// let name = encrypt_key(&dir, &mut rng, &private_key, "password_to_keystore", Some("my-key"))?;
 /// # Ok(())
 /// # }
 /// ```
@@ -168,6 +180,7 @@ pub fn encrypt_key<P, R, B, S>(
     rng: &mut R,
     pk: B,
     password: S,
+    name: Option<&str>,
 ) -> Result<String, KeystoreError>
 where
     P: AsRef<Path>,
@@ -203,8 +216,15 @@ where
         .chain(&ciphertext)
         .finalize();
 
-    // Construct and serialize the encrypted JSON keystore.
+    // If a file name is not specified for the keystore, simply use the strigified uuid.
     let id = Uuid::new_v4();
+    let name = if let Some(name) = name {
+        name.to_string()
+    } else {
+        id.to_string()
+    };
+
+    // Construct and serialize the encrypted JSON keystore.
     let keystore = EthKeystore {
         id,
         version: 3,
@@ -226,7 +246,7 @@ where
     let contents = serde_json::to_string(&keystore)?;
 
     // Create a file in write-only mode, to store the encrypted JSON keystore.
-    let mut file = File::create(dir.as_ref().join(id.to_string()))?;
+    let mut file = File::create(dir.as_ref().join(&name))?;
     file.write_all(contents.as_bytes())?;
 
     Ok(id.to_string())
