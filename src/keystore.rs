@@ -87,6 +87,39 @@ where
 mod tests {
     use super::*;
 
+    #[cfg(feature = "geth-compat")]
+    #[test]
+    fn deserialize_geth_compat_keystore() {
+        let data = r#"
+        {
+            "address": "00000398232e2064f896018496b4b44b3d62751f",
+            "crypto": {
+                "cipher": "aes-128-ctr",
+                "ciphertext": "4f784cd629a7caf34b488e36fb96aad8a8f943a6ce31c7deab950c5e3a5b1c43",
+                "cipherparams": {
+                    "iv": "76f07196b3c94f25b8f34d869493f640"
+                },
+                "kdf": "scrypt",
+                "kdfparams": {
+                    "dklen": 32,
+                    "n": 262144,
+                    "p": 1,
+                    "r": 8,
+                    "salt": "1e7be4ce8351dd1710b0885438414b1748a81f1af510eda11e4d1f99c8d43975"
+                },
+                "mac": "5b5433575a2418c1c813337a88b4099baa2f534e5dabeba86979d538c1f594d8"
+            },
+            "id": "6c4485f3-3cc0-4081-848e-8bf489f2c262",
+            "version": 3
+        }"#;
+        let keystore: EthKeystore = serde_json::from_str(data).unwrap();
+        assert_eq!(
+            keystore.address.as_bytes().to_vec(),
+            hex::decode("00000398232e2064f896018496b4b44b3d62751f").unwrap()
+        );
+    }
+
+    #[cfg(not(feature = "geth-compat"))]
     #[test]
     fn test_deserialize_pbkdf2() {
         let data = r#"
@@ -145,6 +178,7 @@ mod tests {
         );
     }
 
+    #[cfg(not(feature = "geth-compat"))]
     #[test]
     fn test_deserialize_scrypt() {
         let data = r#"

@@ -2,7 +2,7 @@
 pub mod geth_compat {
     use ethereum_types::H160 as Address;
     use k256::{ecdsa::SigningKey, elliptic_curve::sec1::ToEncodedPoint, PublicKey};
-    use tiny_keccak::{Hasher, Keccak};
+    use sha3::{Digest, Keccak256};
 
     use crate::KeystoreError;
 
@@ -25,10 +25,8 @@ pub mod geth_compat {
     where
         S: AsRef<[u8]>,
     {
-        let mut output = [0u8; 32];
-        let mut hasher = Keccak::v256();
+        let mut hasher = Keccak256::new();
         hasher.update(bytes.as_ref());
-        hasher.finalize(&mut output);
-        output
+        hasher.finalize().into()
     }
 }

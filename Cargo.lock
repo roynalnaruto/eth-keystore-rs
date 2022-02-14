@@ -234,7 +234,6 @@ dependencies = [
  "sha2 0.10.1",
  "sha3",
  "thiserror",
- "tiny-keccak",
  "uuid",
 ]
 
