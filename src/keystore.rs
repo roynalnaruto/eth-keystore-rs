@@ -2,10 +2,16 @@ use hex::{FromHex, ToHex};
 use serde::{de::Deserializer, ser::Serializer, Deserialize, Serialize};
 use uuid::Uuid;
 
+#[cfg(feature = "geth-compat")]
+use ethereum_types::H160 as Address;
+
 #[derive(Debug, Deserialize, Serialize)]
 /// This struct represents the deserialized form of an encrypted JSON keystore based on the
 /// [Web3 Secret Storage Definition](https://github.com/ethereum/wiki/wiki/Web3-Secret-Storage-Definition).
 pub struct EthKeystore {
+    #[cfg(feature = "geth-compat")]
+    pub address: Address,
+
     pub crypto: CryptoJson,
     pub id: Uuid,
     pub version: u8,

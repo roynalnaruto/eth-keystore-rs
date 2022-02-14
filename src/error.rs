@@ -22,6 +22,11 @@ pub enum KeystoreError {
     /// Invalid aes key nonce length
     #[error("aes {0:?}")]
     AesInvalidKeyNonceLength(aes::cipher::errors::InvalidLength),
+
+    /// Error propagated from k256 crate
+    #[cfg(feature = "geth-compat")]
+    #[error(transparent)]
+    K256Error(#[from] k256::ecdsa::Error),
 }
 
 impl From<scrypt::errors::InvalidParams> for KeystoreError {
