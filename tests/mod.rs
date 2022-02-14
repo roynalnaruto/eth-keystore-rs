@@ -37,6 +37,7 @@ mod tests {
         assert!(std::fs::remove_file(&keypath).is_ok());
     }
 
+    #[cfg(not(feature = "geth-compat"))]
     #[test]
     fn test_decrypt_pbkdf2() {
         let secret =
@@ -47,6 +48,7 @@ mod tests {
         assert!(decrypt_key(&keypath, "wrongtestpassword").is_err());
     }
 
+    #[cfg(not(feature = "geth-compat"))]
     #[test]
     fn test_decrypt_scrypt() {
         let secret =
