@@ -20,6 +20,10 @@ use std::{
 
 mod error;
 mod keystore;
+mod utils;
+
+#[cfg(feature = "geth-compat")]
+use utils::geth_compat::address_from_pk;
 
 pub use error::KeystoreError;
 pub use keystore::{CipherparamsJson, CryptoJson, EthKeystore, KdfType, KdfparamsType};
@@ -242,6 +246,8 @@ where
             },
             mac: mac.to_vec(),
         },
+        #[cfg(feature = "geth-compat")]
+        address: address_from_pk(&pk)?,
     };
     let contents = serde_json::to_string(&keystore)?;
 
