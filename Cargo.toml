@@ -17,7 +17,7 @@ ctr = "0.8.0"
 digest = "0.10.0"
 hex = "0.4.2"
 hmac = "0.12.0"
-pbkdf2 = "0.10.0"
+pbkdf2 = "0.11"
 rand = "0.8.4"
 scrypt = "0.8.1"
 serde = { version = "1.0", features = ["derive"] }
