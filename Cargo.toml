@@ -12,14 +12,14 @@ keywords = ["ethereum", "web3", "wallet"]
 exclude = ["tests/test-keys/*"]
 
 [dependencies]
-aes = "0.7.4"
-ctr = "0.8.0"
+aes = "0.8.0"
+ctr = "0.9.0"
 digest = "0.10.0"
 hex = "0.4.2"
 hmac = "0.12.0"
-pbkdf2 = "0.11"
+pbkdf2 = { version = "0.11", default-features = false }
 rand = "0.8.4"
-scrypt = "0.8.1"
+scrypt = { version = "0.10.0", default-features = false }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sha2 = "0.10.1"
@@ -29,7 +29,7 @@ uuid = { version = "0.8", features = ["serde", "v4"] }
 
 # feature = "geth-compat"
 ethereum-types = { version = "0.13.1", optional = true }
-k256 = { version = "0.10.2", optional = true }
+k256 = { version = "0.11.0", optional = true }
 
 [features]
 geth-compat = ["ethereum-types", "k256", "k256/ecdsa"]
