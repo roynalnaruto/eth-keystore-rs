@@ -21,7 +21,7 @@ pub enum KeystoreError {
     ScryptInvalidOuputLen(scrypt::errors::InvalidOutputLen),
     /// Invalid aes key nonce length
     #[error("aes {0:?}")]
-    AesInvalidKeyNonceLength(aes::cipher::errors::InvalidLength),
+    AesInvalidKeyNonceLength(aes::cipher::InvalidLength),
 
     /// Error propagated from k256 crate
     #[cfg(feature = "geth-compat")]
@@ -41,8 +41,8 @@ impl From<scrypt::errors::InvalidOutputLen> for KeystoreError {
     }
 }
 
-impl From<aes::cipher::errors::InvalidLength> for KeystoreError {
-    fn from(e: aes::cipher::errors::InvalidLength) -> Self {
+impl From<aes::cipher::InvalidLength> for KeystoreError {
+    fn from(e: aes::cipher::InvalidLength) -> Self {
         Self::AesInvalidKeyNonceLength(e)
     }
 }

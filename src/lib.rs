@@ -2,7 +2,10 @@
 //! A minimalist library to interact with encrypted JSON keystores as per the
 //! [Web3 Secret Storage Definition](https://github.com/ethereum/wiki/wiki/Web3-Secret-Storage-Definition).
 
-use ctr::cipher::{NewCipher, StreamCipher};
+use aes::{
+    cipher::{self, InnerIvInit, KeyInit, StreamCipherCore},
+    Aes128,
+};
 use digest::{Digest, Update};
 use hmac::Hmac;
 use pbkdf2::pbkdf2;
@@ -27,7 +30,6 @@ use utils::geth_compat::address_from_pk;
 
 pub use error::KeystoreError;
 pub use keystore::{CipherparamsJson, CryptoJson, EthKeystore, KdfType, KdfparamsType};
-type Aes128Ctr = ctr::Ctr128BE<aes::Aes128>;
 
 const DEFAULT_CIPHER: &str = "aes-128-ctr";
 const DEFAULT_KEY_SIZE: usize = 32usize;
@@ -144,12 +146,10 @@ where
     }
 
     // Decrypt the private key bytes using AES-128-CTR
-    let mut decryptor = Aes128Ctr::new(
-        (&key[..16]).into(),
-        (&keystore.crypto.cipherparams.iv[..16]).into(),
-    );
+    let decryptor =
+        Aes128Ctr::new(&key[..16], &keystore.crypto.cipherparams.iv[..16]).expect("invalid length");
 
-    let mut pk = keystore.crypto.ciphertext.clone();
+    let mut pk = keystore.crypto.ciphertext;
     decryptor.apply_keystream(&mut pk);
 
     Ok(pk)
@@ -209,7 +209,7 @@ where
     let mut iv = vec![0u8; DEFAULT_IV_SIZE];
     rng.fill_bytes(iv.as_mut_slice());
 
-    let mut encryptor = Aes128Ctr::new((&key[..16]).into(), (&iv[..16]).into());
+    let encryptor = Aes128Ctr::new(&key[..16], &iv[..16]).expect("invalid length");
 
     let mut ciphertext = pk.as_ref().to_vec();
     encryptor.apply_keystream(&mut ciphertext);
@@ -256,4 +256,20 @@ where
     file.write_all(contents.as_bytes())?;
 
     Ok(id.to_string())
+}
+
+struct Aes128Ctr {
+    inner: ctr::CtrCore<Aes128, ctr::flavors::Ctr128BE>,
+}
+
+impl Aes128Ctr {
+    fn new(key: &[u8], iv: &[u8]) -> Result<Self, cipher::InvalidLength> {
+        let cipher = aes::Aes128::new_from_slice(key).unwrap();
+        let inner = ctr::CtrCore::inner_iv_slice_init(cipher, iv).unwrap();
+        Ok(Self { inner })
+    }
+
+    fn apply_keystream(self, buf: &mut [u8]) {
+        self.inner.apply_keystream_partial(buf.into());
+    }
 }

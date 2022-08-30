@@ -37,7 +37,7 @@ pub struct CipherparamsJson {
     pub iv: Vec<u8>,
 }
 
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "lowercase")]
 /// Types of key derivition functions supported by the Web3 Secret Storage.
 pub enum KdfType {
@@ -45,7 +45,7 @@ pub enum KdfType {
     Scrypt,
 }
 
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(untagged)]
 /// Defines the various parameters used in the supported KDFs.
 pub enum KdfparamsType {
