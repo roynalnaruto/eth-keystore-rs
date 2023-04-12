@@ -8,6 +8,7 @@ use aes::{
 };
 use digest::{Digest, Update};
 use hmac::Hmac;
+use keystore::{Checksum, ChecksumParams, Cipher, HashFunction, Kdf};
 use pbkdf2::pbkdf2;
 use rand::{CryptoRng, Rng};
 use scrypt::{scrypt, Params as ScryptParams};
@@ -109,7 +110,7 @@ where
     let keystore: EthKeystore = serde_json::from_str(&contents)?;
 
     // Derive the key.
-    let key = match keystore.crypto.kdfparams {
+    let key = match keystore.crypto.kdf.params {
         KdfparamsType::Pbkdf2 {
             c,
             dklen,
@@ -136,20 +137,20 @@ where
     };
 
     // Derive the MAC from the derived key and ciphertext.
-    let derived_mac = Keccak256::new()
+    let derived_mac = Sha256::new()
         .chain(&key[16..32])
-        .chain(&keystore.crypto.ciphertext)
+        .chain(&keystore.crypto.cipher.message)
         .finalize();
 
-    if derived_mac.as_slice() != keystore.crypto.mac.as_slice() {
+    if derived_mac.as_slice() != keystore.crypto.checksum.message.as_slice() {
         return Err(KeystoreError::MacMismatch);
     }
 
     // Decrypt the private key bytes using AES-128-CTR
-    let decryptor =
-        Aes128Ctr::new(&key[..16], &keystore.crypto.cipherparams.iv[..16]).expect("invalid length");
+    let decryptor = Aes128Ctr::new(&key[..16], &keystore.crypto.cipher.params.iv[..16])
+        .expect("invalid length");
 
-    let mut pk = keystore.crypto.ciphertext;
+    let mut pk = keystore.crypto.cipher.message;
     decryptor.apply_keystream(&mut pk);
 
     Ok(pk)
@@ -215,39 +216,54 @@ where
     encryptor.apply_keystream(&mut ciphertext);
 
     // Calculate the MAC.
-    let mac = Keccak256::new()
+    let mac = Sha256::new()
         .chain(&key[16..32])
         .chain(&ciphertext)
         .finalize();
 
     // If a file name is not specified for the keystore, simply use the strigified uuid.
-    let id = Uuid::new_v4();
+    let uuid = Uuid::new_v4();
     let name = if let Some(name) = name {
         name.to_string()
     } else {
-        id.to_string()
+        uuid.to_string()
     };
+
+    let version = 4;
+    let pubkey = String::from("123123");
+    let path = String::from("path");
+    let description = String::from("asdf");
 
     // Construct and serialize the encrypted JSON keystore.
     let keystore = EthKeystore {
-        id,
-        version: 3,
         crypto: CryptoJson {
-            cipher: String::from(DEFAULT_CIPHER),
-            cipherparams: CipherparamsJson { iv },
-            ciphertext: ciphertext.to_vec(),
-            kdf: KdfType::Scrypt,
-            kdfparams: KdfparamsType::Scrypt {
-                dklen: DEFAULT_KDF_PARAMS_DKLEN,
-                n: 2u32.pow(DEFAULT_KDF_PARAMS_LOG_N as u32),
-                p: DEFAULT_KDF_PARAMS_P,
-                r: DEFAULT_KDF_PARAMS_R,
-                salt,
+            kdf: Kdf {
+                function: KdfType::Scrypt,
+                params: KdfparamsType::Scrypt {
+                    dklen: DEFAULT_KDF_PARAMS_DKLEN,
+                    n: 2u32.pow(DEFAULT_KDF_PARAMS_LOG_N as u32),
+                    p: DEFAULT_KDF_PARAMS_P,
+                    r: DEFAULT_KDF_PARAMS_R,
+                    salt,
+                },
+                message: vec![],
             },
-            mac: mac.to_vec(),
+            checksum: Checksum {
+                function: HashFunction::Sha256,
+                params: ChecksumParams {},
+                message: mac.to_vec(),
+            },
+            cipher: Cipher {
+                function: String::from(DEFAULT_CIPHER),
+                params: CipherparamsJson { iv },
+                message: ciphertext.to_vec(),
+            },
         },
-        #[cfg(feature = "geth-compat")]
-        address: address_from_pk(&pk)?,
+        description,
+        pubkey,
+        path,
+        uuid: name.clone(),
+        version,
     };
     let contents = serde_json::to_string(&keystore)?;
 
@@ -255,7 +271,7 @@ where
     let mut file = File::create(dir.as_ref().join(&name))?;
     file.write_all(contents.as_bytes())?;
 
-    Ok(id.to_string())
+    Ok(uuid.to_string())
 }
 
 struct Aes128Ctr {
