@@ -156,6 +156,60 @@ where
     Ok(pk)
 }
 
+pub fn decrypt_keystore<S>(keystore_s: &String, password: S) -> Result<Vec<u8>, KeystoreError>
+where
+    S: AsRef<[u8]>,
+{
+    // Deserialize keystore string
+    let keystore: EthKeystore = serde_json::from_str(&keystore_s)?;
+
+    // Derive the key.
+    let key = match keystore.crypto.kdf.params {
+        KdfparamsType::Pbkdf2 {
+            c,
+            dklen,
+            prf: _,
+            salt,
+        } => {
+            let mut key = vec![0u8; dklen as usize];
+            pbkdf2::<Hmac<Sha256>>(password.as_ref(), &salt, c, key.as_mut_slice());
+            key
+        }
+        KdfparamsType::Scrypt {
+            dklen,
+            n,
+            p,
+            r,
+            salt,
+        } => {
+            let mut key = vec![0u8; dklen as usize];
+            let log_n = (n as f32).log2() as u8;
+            let scrypt_params = ScryptParams::new(log_n, r, p)?;
+            scrypt(password.as_ref(), &salt, &scrypt_params, key.as_mut_slice())?;
+            key
+        }
+    };
+
+    // Derive the MAC from the derived key and ciphertext.
+    let derived_mac = Sha256::new()
+        .chain(&key[16..32])
+        .chain(&keystore.crypto.cipher.message)
+        .finalize();
+
+    if derived_mac.as_slice() != keystore.crypto.checksum.message.as_slice() {
+        return Err(KeystoreError::MacMismatch);
+    }
+
+    // Decrypt the private key bytes using AES-128-CTR
+    let decryptor = Aes128Ctr::new(&key[..16], &keystore.crypto.cipher.params.iv[..16])
+        .expect("invalid length");
+
+    let mut pk = keystore.crypto.cipher.message;
+    decryptor.apply_keystream(&mut pk);
+
+    Ok(pk)
+}
+
 /// Encrypts the given private key using the [Scrypt](https://tools.ietf.org/html/rfc7914.html)
 /// password-based key derivation function, and stores it in the provided directory. On success, it
 /// returns the `id` (Uuid) generated for this keystore.
