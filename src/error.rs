@@ -3,6 +3,9 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 /// An error thrown when interacting with the eth-keystore crate.
 pub enum KeystoreError {
+    // An error when the input BLS private key is not parsed correctly
+    #[error("blst {0:?}")]
+    BLSError(blst::BLST_ERROR),
     /// An error thrown while decrypting an encrypted JSON keystore if the calculated MAC does not
     /// match the MAC declared in the keystore.
     #[error("Mac Mismatch")]

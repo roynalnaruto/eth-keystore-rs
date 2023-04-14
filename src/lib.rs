@@ -13,7 +13,6 @@ use pbkdf2::pbkdf2;
 use rand::{CryptoRng, Rng};
 use scrypt::{scrypt, Params as ScryptParams};
 use sha2::Sha256;
-use sha3::Keccak256;
 use uuid::Uuid;
 
 use std::{
@@ -36,51 +35,9 @@ const DEFAULT_CIPHER: &str = "aes-128-ctr";
 const DEFAULT_KEY_SIZE: usize = 32usize;
 const DEFAULT_IV_SIZE: usize = 16usize;
 const DEFAULT_KDF_PARAMS_DKLEN: u8 = 32u8;
-const DEFAULT_KDF_PARAMS_LOG_N: u8 = 13u8;
+const DEFAULT_KDF_PARAMS_LOG_N: u8 = 18u8;
 const DEFAULT_KDF_PARAMS_R: u32 = 8u32;
 const DEFAULT_KDF_PARAMS_P: u32 = 1u32;
-
-/// Creates a new JSON keystore using the [Scrypt](https://tools.ietf.org/html/rfc7914.html)
-/// key derivation function. The keystore is encrypted by a key derived from the provided `password`
-/// and stored in the provided directory with either the user-provided filename, or a generated
-/// Uuid `id`.
-///
-/// # Example
-///
-/// ```no_run
-/// use eth_keystore::new;
-/// use std::path::Path;
-///
-/// # async fn foobar() -> Result<(), Box<dyn std::error::Error>> {
-/// let dir = Path::new("./keys");
-/// let mut rng = rand::thread_rng();
-/// // here `None` signifies we don't specify a filename for the keystore.
-/// // the default filename is a generated Uuid for the keystore.
-/// let (private_key, name) = new(&dir, &mut rng, "password_to_keystore", None)?;
-///
-/// // here `Some("my_key")` denotes a custom filename passed by the caller.
-/// let (private_key, name) = new(&dir, &mut rng, "password_to_keystore", Some("my_key"))?;
-/// # Ok(())
-/// # }
-/// ```
-pub fn new<P, R, S>(
-    dir: P,
-    rng: &mut R,
-    password: S,
-    name: Option<&str>,
-) -> Result<(Vec<u8>, String), KeystoreError>
-where
-    P: AsRef<Path>,
-    R: Rng + CryptoRng,
-    S: AsRef<[u8]>,
-{
-    // Generate a random private key.
-    let mut pk = vec![0u8; DEFAULT_KEY_SIZE];
-    rng.fill_bytes(pk.as_mut_slice());
-
-    let name = encrypt_key(dir, rng, &pk, password, name)?;
-    Ok((pk, name))
-}
 
 /// Decrypts an encrypted JSON keystore at the provided `path` using the provided `password`.
 /// Decryption supports the [Scrypt](https://tools.ietf.org/html/rfc7914.html) and
@@ -107,53 +64,7 @@ where
     let mut file = File::open(path)?;
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;
-    let keystore: EthKeystore = serde_json::from_str(&contents)?;
-
-    // Derive the key.
-    let key = match keystore.crypto.kdf.params {
-        KdfparamsType::Pbkdf2 {
-            c,
-            dklen,
-            prf: _,
-            salt,
-        } => {
-            let mut key = vec![0u8; dklen as usize];
-            pbkdf2::<Hmac<Sha256>>(password.as_ref(), &salt, c, key.as_mut_slice());
-            key
-        }
-        KdfparamsType::Scrypt {
-            dklen,
-            n,
-            p,
-            r,
-            salt,
-        } => {
-            let mut key = vec![0u8; dklen as usize];
-            let log_n = (n as f32).log2() as u8;
-            let scrypt_params = ScryptParams::new(log_n, r, p)?;
-            scrypt(password.as_ref(), &salt, &scrypt_params, key.as_mut_slice())?;
-            key
-        }
-    };
-
-    // Derive the MAC from the derived key and ciphertext.
-    let derived_mac = Sha256::new()
-        .chain(&key[16..32])
-        .chain(&keystore.crypto.cipher.message)
-        .finalize();
-
-    if derived_mac.as_slice() != keystore.crypto.checksum.message.as_slice() {
-        return Err(KeystoreError::MacMismatch);
-    }
-
-    // Decrypt the private key bytes using AES-128-CTR
-    let decryptor = Aes128Ctr::new(&key[..16], &keystore.crypto.cipher.params.iv[..16])
-        .expect("invalid length");
-
-    let mut pk = keystore.crypto.cipher.message;
-    decryptor.apply_keystream(&mut pk);
-
-    Ok(pk)
+    decrypt_keystore(&contents, password)
 }
 
 pub fn decrypt_keystore<S>(keystore_s: &String, password: S) -> Result<Vec<u8>, KeystoreError>
@@ -247,6 +158,13 @@ where
     B: AsRef<[u8]>,
     S: AsRef<[u8]>,
 {
+    let bls_sk = match blst::min_pk::SecretKey::from_bytes(pk.as_ref()) {
+        Ok(sk) => sk,
+        Err(e) => return Err(KeystoreError::BLSError(e)),
+    };
+
+    let bls_pk = bls_sk.sk_to_pk().compress();
+    let pubkey = hex::encode(&bls_pk);
     // Generate a random salt.
     let mut salt = vec![0u8; DEFAULT_KEY_SIZE];
     rng.fill_bytes(salt.as_mut_slice());
@@ -284,9 +202,8 @@ where
     };
 
     let version = 4;
-    let pubkey = String::from("123123");
-    let path = String::from("path");
-    let description = String::from("asdf");
+    let path = String::from(""); // Path is not currently derived
+    let description = String::from("Version 4 BLS keystore");
 
     // Construct and serialize the encrypted JSON keystore.
     let keystore = EthKeystore {
