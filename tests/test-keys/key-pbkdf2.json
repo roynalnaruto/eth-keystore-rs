@@ -1,19 +1,31 @@
 {
-  "crypto" : {
-    "cipher" : "aes-128-ctr",
-    "cipherparams" : {
-      "iv" : "6087dab2f9fdbbfaddc31a909735c1e6"
-    },
-    "ciphertext" : "5318b4d5bcd28de64ee5559e671353e16f075ecae9f99c7a79a38af5f869aa46",
-    "kdf" : "pbkdf2",
-    "kdfparams" : {
-      "c" : 262144,
-      "dklen" : 32,
-      "prf" : "hmac-sha256",
-      "salt" : "ae3cd4e7013836a3df6bd7241b12db061dbe2c6785853cce422d148a624ce0bd"
-    },
-    "mac" : "517ead924a9d0dc3124507e3393d175ce3ff7c1e96529c6c555ce9e51205e9b2"
+  "crypto": {
+      "kdf": {
+          "function": "pbkdf2",
+          "params": {
+              "dklen": 32,
+              "c": 262144,
+              "prf": "hmac-sha256",
+              "salt": "d4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3"
+          },
+          "message": ""
+      },
+      "checksum": {
+          "function": "sha256",
+          "params": {},
+          "message": "8a9f5d9912ed7e75ea794bc5a89bca5f193721d30868ade6f73043c6ea6febf1"
+      },
+      "cipher": {
+          "function": "aes-128-ctr",
+          "params": {
+              "iv": "264daa3f303d7259501c93d997d84fe6"
+          },
+          "message": "cee03fde2af33149775b7223e7845e4fb2c8ae1792e5f99fe9ecf474cc8c16ad"
+      }
   },
-  "id" : "3198bc9c-6672-5ab3-d995-4942343ae5b6",
-  "version" : 3
+  "description": "This is a test keystore that uses PBKDF2 to secure the secret.",
+  "pubkey": "9612d7a727c9d0a22e185a1c768478dfe919cada9266988cb32359c11f2b7b27f4ae4040902382ae2910c15e2b420d07",
+  "path": "m/12381/60/0/0",
+  "uuid": "64625def-3331-4eea-ab6f-782f3ed16a83",
+  "version": 4
 }
