@@ -128,7 +128,9 @@ where
             salt,
         } => {
             let mut key = vec![0u8; dklen as usize];
-            let log_n = (n as f32).log2() as u8;
+            // TODO: use int_log https://github.com/rust-lang/rust/issues/70887
+            // TODO: when it is stable
+            let log_n = (n as f32).log2().ceil() as u8;
             let scrypt_params = ScryptParams::new(log_n, r, p)?;
             scrypt(password.as_ref(), &salt, &scrypt_params, key.as_mut_slice())?;
             key
