@@ -254,7 +254,7 @@ where
     let contents = serde_json::to_string(&keystore)?;
 
     // Create a file in write-only mode, to store the encrypted JSON keystore.
-    let mut file = File::create(dir.as_ref().join(&name))?;
+    let mut file = File::create(dir.as_ref().join(name))?;
     file.write_all(contents.as_bytes())?;
 
     Ok(id.to_string())
