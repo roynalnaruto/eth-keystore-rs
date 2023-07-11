@@ -1,10 +1,6 @@
 mod keystore;
 
-use std::{
-    fs::File,
-    io::{Read, Write},
-    path::Path,
-};
+use std::{fs::File, io::Write, path::Path};
 
 use aes::{
     cipher::{self, InnerIvInit, KeyInit, StreamCipherCore},
@@ -19,11 +15,16 @@ use sha2::Sha256;
 use sha3::Keccak256;
 use uuid::Uuid;
 
-use crate::{
-    KeystoreError, DEFAULT_CIPHER, DEFAULT_IV_SIZE, DEFAULT_KDF_PARAMS_DKLEN,
-    DEFAULT_KDF_PARAMS_LOG_N, DEFAULT_KDF_PARAMS_P, DEFAULT_KDF_PARAMS_R, DEFAULT_KEY_SIZE,
-};
+use crate::KeystoreError;
 pub use keystore::*;
+
+const DEFAULT_CIPHER: &str = "aes-128-ctr";
+const DEFAULT_KEY_SIZE: usize = 32usize;
+const DEFAULT_IV_SIZE: usize = 16usize;
+const DEFAULT_KDF_PARAMS_DKLEN: u8 = 32u8;
+const DEFAULT_KDF_PARAMS_LOG_N: u8 = 13u8;
+const DEFAULT_KDF_PARAMS_R: u32 = 8u32;
+const DEFAULT_KDF_PARAMS_P: u32 = 1u32;
 
 pub fn new<P, R, S>(
     dir: P,
@@ -123,7 +124,7 @@ where
     Ok(id.to_string())
 }
 
-pub fn decrypt<S>(keystore: EthKeystoreV3, password: S) -> Result<Vec<u8>, KeystoreError>
+pub fn decrypt_key<S>(keystore: EthKeystoreV3, password: S) -> Result<Vec<u8>, KeystoreError>
 where
     S: AsRef<[u8]>,
 {

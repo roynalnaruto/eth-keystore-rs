@@ -52,11 +52,7 @@ pub enum KdfType {
 #[cfg(test)]
 mod tests {
 
-    use hex::FromHex;
-    use uuid::Uuid;
-
     use crate::keystore::EthKeystore;
-    use crate::v3::{KdfType, KdfparamsType};
 
     #[cfg(not(feature = "geth-compat"))]
     #[test]
@@ -94,7 +90,6 @@ mod tests {
     fn test_deserialize_scrypt() {
         // Test vec from: https://eips.ethereum.org/EIPS/eip-2335
 
-        use hex::FromHex;
         let data = r#"
         {
             "crypto": {

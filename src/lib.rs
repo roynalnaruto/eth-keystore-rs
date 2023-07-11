@@ -10,22 +10,13 @@ use std::{fs::File, io::Read, path::Path};
 mod error;
 mod keystore;
 mod utils;
-mod v3;
-mod v4;
+pub mod v3;
+pub mod v4;
 
 #[cfg(feature = "geth-compat")]
 use utils::geth_compat::address_from_pk;
 
 pub use error::KeystoreError;
-//pub use keystore::{CipherparamsJson, CryptoJson, EthKeystore, KdfType, KdfparamsType};
-
-const DEFAULT_CIPHER: &str = "aes-128-ctr";
-const DEFAULT_KEY_SIZE: usize = 32usize;
-const DEFAULT_IV_SIZE: usize = 16usize;
-const DEFAULT_KDF_PARAMS_DKLEN: u8 = 32u8;
-const DEFAULT_KDF_PARAMS_LOG_N: u8 = 13u8;
-const DEFAULT_KDF_PARAMS_R: u32 = 8u32;
-const DEFAULT_KDF_PARAMS_P: u32 = 1u32;
 
 /// Creates a new JSON keystore using the [Scrypt](https://tools.ietf.org/html/rfc7914.html)
 /// key derivation function. The keystore is encrypted by a key derived from the provided `password`
@@ -91,8 +82,8 @@ where
     let keystore: EthKeystore = serde_json::from_str(&contents)?;
 
     match keystore {
-        EthKeystore::V3(keystore) => v3::decrypt(keystore, password),
-        EthKeystore::V4(keystore) => v4::decrypt(keystore, password),
+        EthKeystore::V3(keystore) => v3::decrypt_key(keystore, password),
+        EthKeystore::V4(keystore) => v4::decrypt_key(keystore, password),
     }
 }
 

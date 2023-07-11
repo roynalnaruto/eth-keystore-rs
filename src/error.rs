@@ -27,6 +27,10 @@ pub enum KeystoreError {
     #[cfg(feature = "geth-compat")]
     #[error(transparent)]
     K256Error(#[from] k256::ecdsa::Error),
+
+    // An error when the input BLS private key is not parsed correctly
+    #[error("blst {0:?}")]
+    BLSError(blst::BLST_ERROR),
 }
 
 impl From<scrypt::errors::InvalidParams> for KeystoreError {
