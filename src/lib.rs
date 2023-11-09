@@ -194,7 +194,7 @@ where
         .finalize();
 
     // If a file name is not specified for the keystore, simply use the strigified uuid.
-    let uuid = Uuid::new_v4();
+    let uuid = Uuid::new_v4().to_string();
     let name = if let Some(name) = name {
         name.to_string()
     } else {
@@ -202,7 +202,9 @@ where
     };
 
     let version = 4;
-    let path = String::from(""); // Path is not currently derived
+
+    // https://eips.ethereum.org/EIPS/eip-2334
+    let path = String::from("m/12381/3600/0/0/0"); 
     let description = String::from("Version 4 BLS keystore");
 
     // Construct and serialize the encrypted JSON keystore.
@@ -233,7 +235,7 @@ where
         description,
         pubkey,
         path,
-        uuid: name.clone(),
+        uuid,
         version,
     };
     let contents = serde_json::to_string(&keystore)?;
@@ -242,7 +244,7 @@ where
     let mut file = File::create(dir.as_ref().join(&name))?;
     file.write_all(contents.as_bytes())?;
 
-    Ok(uuid.to_string())
+    Ok(name)
 }
 
 struct Aes128Ctr {

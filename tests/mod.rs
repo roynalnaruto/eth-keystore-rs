@@ -37,7 +37,7 @@ mod tests {
     #[test]
     fn test_encrypt_decrypt_key() {
         let secret =
-            Vec::from_hex("000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f")
+            Vec::from_hex("4c627588f8040116b75f14fdb55b552612a46a2cd91e65b516defe39d81fc08f")
                 .unwrap();
         let dir = Path::new("./tests/test-keys");
         let mut rng = rand::thread_rng();
