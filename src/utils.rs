@@ -8,8 +8,8 @@ pub mod geth_compat {
 
     /// Converts a K256 SigningKey to an Ethereum Address
     pub fn address_from_pk<S>(pk: S) -> Result<Address, KeystoreError>
-    where
-        S: AsRef<[u8]>,
+        where
+            S: AsRef<[u8]>,
     {
         let secret_key = SigningKey::from_bytes(pk.as_ref())?;
         let public_key = PublicKey::from(&secret_key.verifying_key());
@@ -22,8 +22,8 @@ pub mod geth_compat {
 
     /// Compute the Keccak-256 hash of input bytes.
     fn keccak256<S>(bytes: S) -> [u8; 32]
-    where
-        S: AsRef<[u8]>,
+        where
+            S: AsRef<[u8]>,
     {
         let mut hasher = Keccak256::new();
         hasher.update(bytes.as_ref());

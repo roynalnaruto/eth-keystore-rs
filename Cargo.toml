@@ -23,13 +23,14 @@ scrypt = { version = "0.10.0", default-features = false }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sha2 = "0.10.1"
-sha3 = "0.10.0"
 thiserror = { version = "1.0.22", default-features = false }
-uuid = { version = "1.0", features = ["serde", "v4"] }
+uuid = { version = "1.6.1", features = ["serde", "v4"] }
+blst = { version = "0.3.11" }
 
 # feature = "geth-compat"
-ethereum-types = { version = "0.13.1", optional = true }
-k256 = { version = "0.11.0", optional = true }
+ethereum-types = { version = "0.14.1", optional = true }
+k256 = { version = "0.13.3", optional = true }
+sha3 = { version = "0.10.0" }
 
 [features]
 geth-compat = ["ethereum-types", "k256", "k256/ecdsa"]
