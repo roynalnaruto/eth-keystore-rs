@@ -143,7 +143,7 @@ pub fn decrypt_keystore_v3<S>(keystore: EthKeystoreV3, password: S) -> Result<Ve
 pub fn encrypt_key_v3<P, R, B, S>(
     dir: P,
     rng: &mut R,
-    pk: B,
+    priv_key: B,
     password: S,
     name: Option<&str>,
 ) -> Result<String, KeystoreError>
@@ -153,7 +153,7 @@ pub fn encrypt_key_v3<P, R, B, S>(
         B: AsRef<[u8]>,
         S: AsRef<[u8]>,
 {
-    let keystore = encrypt_keystore_v3(rng, pk, password)?;
+    let keystore = encrypt_keystore_v3(rng, priv_key, password)?;
 
     // Set the keystore id to the provided name or to the generated uuid while encrypting the keystore
     let id = if let Some(name) = name {
@@ -340,7 +340,7 @@ pub fn decrypt_keystore_v4<S>(keystore: EthKeystoreV4, password: S) -> Result<Ve
 pub fn encrypt_key_v4<P, R, B, S>(
     dir: P,
     rng: &mut R,
-    pk: B,
+    priv_key: B,
     password: S,
     name: Option<&str>,
 ) -> Result<String, KeystoreError>
@@ -350,7 +350,8 @@ pub fn encrypt_key_v4<P, R, B, S>(
         B: AsRef<[u8]>,
         S: AsRef<[u8]>,
 {
-    let keystore = encrypt_keystore_v4(rng, pk, None::<&str>, password)?;
+    let pub_key = None::<&str>;
+    let keystore = encrypt_keystore_v4(rng, priv_key, pub_key, password)?;
 
     // Set the keystore id to the provided name or to the generated uuid while encrypting the keystore
     let id = if let Some(name) = name {
